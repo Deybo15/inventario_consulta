@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inventario Consulta</title>
+</head>
+<body>
+  <h1>Consulta de Inventario</h1>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+    const supabaseUrl = 'https://TUDOMINIO.supabase.co';
+    const supabaseKey = 'TU_API_KEY';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    async function obtenerDatos() {
+      const { data, error } = await supabase.from('tu_tabla').select('*');
+      console.log(data);
+    }
+
+    obtenerDatos();
+  </script>
+</body>
+</html>
