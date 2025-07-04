@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventario Actual - SDMO</title>
+
+  <!-- Import map para Supabase en modo ESM -->
+  <script type="importmap">
+    {
+      "imports": {
+        "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"
+      }
+    }
+  </script>
+
+  <!-- Librerías externas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Estilos -->
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1d29;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      color: #e4e6ea;
+      background-image: 
+        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(120, 219, 226, 0.1) 0%, transparent 50%);
+    }
+    
+    header {
+      background: rgba(26, 29, 41, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      color: #e4e6ea;
+      padding: 2rem 1rem;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    header h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 2.5rem;
+      font-weight: 300;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 10px rgba(102, 126, 234, 0.3));
+    }
+    
+    header p {
+      margin: 0;
+      opacity: 0.8;
+      font-size: 1.1rem;
+      color: #9ca3af;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 2rem auto;
+      background: rgba(30, 34, 48, 0.8);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .filters input {
+      padding: 0.875rem 1rem;
+      background: rgba(45, 50, 65, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      font-size: 1rem;
+      color: #e4e6ea;
+      transition: all 0.3s ease;
+    }
+    
+    .filters input::placeholder {
+      color: #9ca3af;
+      opacity: 0.7;
+    }
+    
+    .filters input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 
+        0 0 0 3px rgba(102, 126, 234, 0.2),
+        0 0 20px rgba(102, 126, 234, 0.1);
+      background: rgba(55, 60, 75, 0.8);
+    }
+    
+    .actions {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      background: rgba(30, 34, 48, 0.6);
+      backdrop-filter: blur(10px);
+    }
+    
+    th, td {
+      padding: 1rem 0.75rem;
+      text-align: left;
+      vertical-align: middle;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    th {
+      background: linear-gradient(135deg, 
+        rgba(102, 126, 234, 0.3) 0%, 
+        rgba(118, 75, 162, 0.3) 100%);
+      color: #e4e6ea;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(102, 126, 234, 0.3);
+    }
+    
+    tbody tr {
+      transition: all 0.3s ease;
+      background: rgba(30, 34, 48, 0.4);
+    }
+    
+    tbody tr:hover {
+      background: rgba(45, 50, 65, 0.8);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    tbody tr:nth-child(even) {
+      background: rgba(35, 40, 55, 0.5);
+    }
+    
+    tbody tr:nth-child(even):hover {
+      background: rgba(45, 50, 65, 0.8);
+    }
+    
+    td {
+      color: #e4e6ea;
+    }
+    
+    td img {
+      max-width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+      display: block;
+      margin: auto;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    td img:hover {
+      transform: scale(1.15);
+      box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+      border-color: #667eea;
+    }
+    
+    .pagination-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: rgba(45, 50, 65, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+    }
+    
+    .btn {
+      padding: 0.875rem 1.5rem;
+      margin: 0.2rem;
+      background: linear-gradient(135deg, 
+        rgba(102, 126, 234, 0.8) 0%, 
+        rgba(118, 75, 162, 0.8) 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: 1px solid rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+      background: linear-gradient(135deg, 
+        rgba(102, 126, 234, 1) 0%, 
+        rgba(118, 75, 162, 1) 100%);
+    }
+    
+    .btn:active {
+      transform: translateY(0);
+    }
+    
+    .btn-back {
+      background: linear-gradient(135deg, 
+        rgba(108, 117, 125, 0.8) 0%, 
+        rgba(90, 98, 104, 0.8) 100%);
+      border-color: rgba(108, 117, 125, 0.3);
+    }
+    
+    .btn-back:hover {
+      background: linear-gradient(135deg, 
+        rgba(108, 117, 125, 1) 0%, 
+        rgba(90, 98, 104, 1) 100%);
+      box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+    }
+    
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn:disabled:hover {
+      transform: none;
+      box-shadow: none;
+      background: linear-gradient(135deg, 
+        rgba(102, 126, 234, 0.8) 0%, 
+        rgba(118, 75, 162, 0.8) 100%);
+    }
+    
+    #page-info {
+      font-weight: 600;
+      color: #e4e6ea;
+      font-size: 1rem;
+      text-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: #9ca3af;
+      font-size: 1.1rem;
+      background: rgba(45, 50, 65, 0.6);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .loading::before {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(102, 126, 234, 0.3);
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .error {
+      background: linear-gradient(135deg, 
+        rgba(231, 76, 60, 0.2) 0%, 
+        rgba(192, 57, 43, 0.2) 100%);
+      color: #ff6b6b;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      margin: 1rem 0;
+      border: 1px solid rgba(231, 76, 60, 0.3);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 15px rgba(231, 76, 60, 0.1);
+    }
+    
+    .marca-badge {
+      display: inline-block;
+      background: rgba(102, 126, 234, 0.2);
+      color: #667eea;
+      padding: 0.4rem 0.875rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border: 1px solid rgba(102, 126, 234, 0.3);
+      backdrop-filter: blur(5px);
+    }
+    
+    /* Scrollbar personalizada */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: rgba(45, 50, 65, 0.3);
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(102, 126, 234, 0.6);
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(102, 126, 234, 0.8);
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        margin: 1rem;
+        padding: 1.5rem;
+      }
+      
+      header h1 {
+        font-size: 2rem;
+      }
+      
+      header p {
+        font-size: 1rem;
+      }
+      
+      .actions {
+        flex-direction: column;
+      }
+      
+      table {
+        font-size: 0.9rem;
+      }
+      
+      th, td {
+        padding: 0.75rem 0.5rem;
+      }
+      
+      .pagination-controls {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+      }
+      
+      .filters {
+        grid-template-columns: 1fr;
+      }
+      
+      td img {
+        max-width: 50px;
+        height: 50px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .container {
+        margin: 0.5rem;
+        padding: 1rem;
+      }
+      
+      header {
+        padding: 1.5rem 1rem;
+      }
+      
+      .btn {
+        padding: 0.75rem 1.25rem;
+        font-size: 0.85rem;
+      }
+      
+      table {
+        font-size: 0.8rem;
+      }
+      
+      th, td {
+        padding: 0.5rem 0.25rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Inventario Actual</h1>
+    <p>Sección Desarrollo y Mantenimiento de Obras</p>
+  </header>
+
+  <div class="container">
+    <!-- Filtros -->
+    <div class="filters">
+      <input id="filtro-codigo" type="text" placeholder="🔍 Buscar por código">
+      <input id="filtro-articulo" type="text" placeholder="🔍 Buscar por artículo">
+    </div>
+
+    <!-- Botones de acciones -->
+    <div class="actions">
+      <button class="btn btn-back" onclick="window.history.back()">
+        ← Regresar
+      </button>
+      <button class="btn" onclick="exportToExcel()">
+        📊 Exportar a Excel
+      </button>
+      <button class="btn" onclick="exportToPDF()">
+        📄 Exportar a PDF
+      </button>
+    </div>
+
+    <!-- Tabla -->
+    <div id="loading" class="loading" style="display: none;">
+      Cargando datos...
+    </div>
+    
+    <div id="error" class="error" style="display: none;"></div>
+
+    <table id="tabla-inventario">
+      <thead>
+        <tr>
+          <th>Imagen</th>
+          <th>Código</th>
+          <th>Artículo</th>
+          <th>Marca</th>
+          <th>Unidad</th>
+          <th>Cantidad</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <!-- Paginación -->
+    <div class="pagination-controls">
+      <button class="btn" id="btn-prev" onclick="prevPage()">← Anterior</button>
+      <span id="page-info">Página 1 de 1</span>
+      <button class="btn" id="btn-next" onclick="nextPage()">Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- Lógica -->
+  <script type="module">
+    import { createClient } from '@supabase/supabase-js';
+
+    // ⚠️ Reemplaza con tus credenciales si cambian
+    const supabase = createClient(
+      'https://qpccqoeronbcdyejfjod.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwY2Nxb2Vyb25iY2R5ZWpmam9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMzA5MzIsImV4cCI6MjA1OTgwNjkzMn0.v_KA6VdHl-F3sRiVaFMsfDQCS1qKERFBk5mTBcSiIDQ'
+    );
+
+    let currentPage = 1;
+    const itemsPerPage = 15;
+    let totalItems = 0;
+    let isLoading = false;
+
+    // Elementos del DOM
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const pageInfo = document.getElementById('page-info');
+
+    function showLoading(show = true) {
+      loadingEl.style.display = show ? 'block' : 'none';
+      isLoading = show;
+      updatePaginationButtons();
+    }
+
+    function showError(message) {
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      setTimeout(() => {
+        errorEl.style.display = 'none';
+      }, 5000);
+    }
+
+    function updatePaginationButtons() {
+      const totalPages = Math.ceil(totalItems / itemsPerPage);
+      btnPrev.disabled = currentPage <= 1 || isLoading;
+      btnNext.disabled = currentPage >= totalPages || isLoading;
+      
+      pageInfo.textContent = totalItems > 0 
+        ? `Página ${currentPage} de ${totalPages} (${totalItems} elementos)`
+        : 'Sin resultados';
+    }
+
+    async function cargarDatos() {
+      if (isLoading) return;
+      
+      showLoading(true);
+      errorEl.style.display = 'none';
+
+      try {
+        const codigo = document.getElementById('filtro-codigo').value.trim();
+        const articulo = document.getElementById('filtro-articulo').value.trim();
+
+        // Consulta simple sin JOIN para evitar errores de permisos
+        let query = supabase
+          .from('inventario_actual')
+          .select('*', { count: 'exact' });
+
+        if (codigo) {
+          query = query.ilike('codigo_articulo', `%${codigo}%`);
+        }
+        if (articulo) {
+          query = query.ilike('nombre_articulo', `%${articulo}%`);
+        }
+
+        const { data: inventarioData, count, error } = await query
+          .order('nombre_articulo')
+          .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+
+        if (error) {
+          throw new Error(`Error de base de datos: ${error.message}`);
+        }
+
+        // Obtener marcas por separado para evitar problemas de JOIN
+        let dataConMarcas = inventarioData || [];
+        
+        if (inventarioData && inventarioData.length > 0) {
+          const codigosArticulos = inventarioData.map(item => item.codigo_articulo).filter(Boolean);
+          
+          if (codigosArticulos.length > 0) {
+            try {
+              const { data: marcasData } = await supabase
+                .from('articulo_01')
+                .select('codigo_articulo, marca')
+                .in('codigo_articulo', codigosArticulos);
+              
+              if (marcasData) {
+                const marcasMap = marcasData.reduce((acc, item) => {
+                  acc[item.codigo_articulo] = item.marca;
+                  return acc;
+                }, {});
+
+                dataConMarcas = inventarioData.map(item => ({
+                  ...item,
+                  marca: marcasMap[item.codigo_articulo] || 'Sin marca'
+                }));
+              }
+            } catch (marcaError) {
+              console.warn('No se pudieron cargar las marcas:', marcaError);
+              // Continuar sin marcas si hay error
+              dataConMarcas = inventarioData.map(item => ({
+                ...item,
+                marca: 'Sin marca'
+              }));
+            }
+          }
+        }
+
+        totalItems = count || 0;
+        renderizarTabla(dataConMarcas);
+        updatePaginationButtons();
+
+      } catch (error) {
+        console.error('Error al cargar datos:', error);
+        showError(`Error al cargar los datos: ${error.message}`);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function renderizarTabla(rows) {
+      const tbody = document.querySelector('#tabla-inventario tbody');
+      tbody.innerHTML = '';
+
+      if (rows.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 3rem; color: #9ca3af; font-size: 1.1rem;">
+              <i class="fas fa-search" style="font-size: 2rem; opacity: 0.5; display: block; margin-bottom: 1rem;"></i>
+              No se encontraron resultados
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      rows.forEach(row => {
+        const cantidad = parseFloat(row.cantidad_disponible);
+        const cantidadFormateada = (!isNaN(cantidad) && isFinite(cantidad))
+          ? cantidad.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          : 'N/D';
+
+        const imagen = row.imagen_url
+          ? `<a href="${row.imagen_url}" target="_blank" rel="noopener">
+               <img src="${row.imagen_url}" alt="Imagen del artículo" 
+                    onerror="this.src='https://via.placeholder.com/60x60/2d3241/9ca3af?text=Sin+img';"
+                    loading="lazy">
+             </a>`
+          : '<img src="https://via.placeholder.com/60x60/2d3241/9ca3af?text=Sin+img" alt="Sin imagen">';
+
+        const marca = row.marca || 'Sin marca';
+        const marcaBadge = `<span class="marca-badge">${marca}</span>`;
+
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td style="text-align: center;">${imagen}</td>
+            <td><strong>${row.codigo_articulo || 'N/D'}</strong></td>
+            <td>${row.nombre_articulo || 'N/D'}</td>
+            <td>${marcaBadge}</td>
+            <td>${row.unidad || 'N/D'}</td>
+            <td><strong>${cantidadFormateada}</strong></td>
+          </tr>
+        `);
+      });
+    }
+
+    // Event listeners para filtros con debounce
+    let timeoutId;
+    function setupFilters() {
+      ['filtro-codigo', 'filtro-articulo'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            currentPage = 1;
+            cargarDatos();
+          }, 300);
+        });
+      });
+    }
+
+    // Funciones de paginación
+    window.prevPage = () => {
+      if (currentPage > 1 && !isLoading) {
+        currentPage--;
+        cargarDatos();
+      }
+    };
+
+    window.nextPage = () => {
+      const totalPages = Math.ceil(totalItems / itemsPerPage);
+      if (currentPage < totalPages && !isLoading) {
+        currentPage++;
+        cargarDatos();
+      }
+    };
+
+    // Funciones de exportación
+    window.exportToExcel = async () => {
+      try {
+        showLoading(true);
+        
+        // Obtener todos los datos sin paginación - método simple
+        const { data: inventarioData, error } = await supabase
+          .from('inventario_actual')
+          .select('codigo_articulo, nombre_articulo, unidad, cantidad_disponible')
+          .order('nombre_articulo');
+
+        if (error) throw error;
+
+        // Obtener marcas por separado
+        const codigosArticulos = inventarioData?.map(item => item.codigo_articulo).filter(Boolean) || [];
+        let marcasMap = {};
+        
+        if (codigosArticulos.length > 0) {
+          try {
+            const { data: marcasData } = await supabase
+              .from('articulo_01')
+              .select('codigo_articulo, marca')
+              .in('codigo_articulo', codigosArticulos);
+            
+            if (marcasData) {
+              marcasMap = marcasData.reduce((acc, item) => {
+                acc[item.codigo_articulo] = item.marca;
+                return acc;
+              }, {});
+            }
+          } catch (marcaError) {
+            console.warn('No se pudieron cargar marcas para exportación:', marcaError);
+          }
+        }
+
+        // Preparar datos para Excel
+        const excelData = inventarioData.map(row => ({
+          'Código': row.codigo_articulo,
+          'Artículo': row.nombre_articulo,
+          'Marca': marcasMap[row.codigo_articulo] || 'Sin marca',
+          'Unidad': row.unidad,
+          'Cantidad': parseFloat(row.cantidad_disponible) || 0
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        
+        // Ajustar ancho de columnas
+        const colWidths = [
+          { wch: 15 }, // Código
+          { wch: 40 }, // Artículo
+          { wch: 20 }, // Marca
+          { wch: 10 }, // Unidad
+          { wch: 15 }  // Cantidad
+        ];
+        ws['!cols'] = colWidths;
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
+        XLSX.writeFile(wb, `Inventario_SDMO_${new Date().toISOString().split('T')[0]}.xlsx`);
+        
+      } catch (error) {
+        showError(`Error al exportar a Excel: ${error.message}`);
+      } finally {
+        showLoading(false);
+      }
+    };
+
+    window.exportToPDF = async () => {
+      try {
+        showLoading(true);
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a4'); // Landscape para mejor ajuste
+
+        // Título
+        doc.setFontSize(18);
+        doc.text('Inventario Actual - SDMO', 14, 20);
+        doc.setFontSize(12);
+        doc.text(`Generado el: ${new Date().toLocaleDateString('es-CR')}`, 14, 30);
+
+        // Obtener datos visibles en la tabla
+        const tableData = [];
+        const rows = document.querySelectorAll('#tabla-inventario tbody tr');
+        
+        rows.forEach(row => {
+          const cells = row.querySelectorAll('td');
+          if (cells.length > 1) { // Evitar la fila de "no hay resultados"
+            tableData.push([
+              cells[1].textContent.trim(), // Código
+              cells[2].textContent.trim(), // Artículo
+              cells[3].textContent.trim(), // Marca
+              cells[4].textContent.trim(), // Unidad
+              cells[5].textContent.trim()  // Cantidad
+            ]);
+          }
+        });
+
+        doc.autoTable({
+          head: [['Código', 'Artículo', 'Marca', 'Unidad', 'Cantidad']],
+          body: tableData,
+          startY: 40,
+          theme: 'striped',
+          headStyles: { fillColor: [102, 126, 234] },
+          styles: { fontSize: 10 },
+          columnStyles: {
+            0: { cellWidth: 30 },
+            1: { cellWidth: 80 },
+            2: { cellWidth: 40 },
+            3: { cellWidth: 25 },
+            4: { cellWidth: 30 }
+          }
+        });
+
+        doc.save(`Inventario_SDMO_${new Date().toISOString().split('T')[0]}.pdf`);
+        
+      } catch (error) {
+        showError(`Error al exportar a PDF: ${error.message}`);
+      } finally {
+        showLoading(false);
+      }
+    };
+
+    // Inicialización
+    setupFilters();
+    cargarDatos();
+  </script>
+</body>
+</html>
