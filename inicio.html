@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Gestión de Artículos - SDMO</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f0f;
+            min-height: 100vh;
+            color: #e4e6ea;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.4) 0%, transparent 60%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.2) 0%, transparent 60%),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 226, 0.15) 0%, transparent 60%);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent 30%, rgba(102, 126, 234, 0.03) 50%, transparent 70%);
+            animation: moveGradient 15s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes moveGradient {
+            0%, 100% { transform: translateX(-100px) translateY(-100px); }
+            50% { transform: translateX(100px) translateY(100px); }
+        }
+
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(30, 34, 48, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            color: #e4e6ea;
+            backdrop-filter: blur(10px);
+            transform: translateX(400px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-left: 4px solid #28a745;
+        }
+
+        .notification.error {
+            border-left: 4px solid #dc3545;
+        }
+
+        .notification.info {
+            border-left: 4px solid #17a2b8;
+        }
+
+        .header {
+            background: rgba(15, 15, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 0.75rem;
+            border-radius: 15px;
+            font-size: 1.5rem;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            transition: transform 0.3s ease;
+        }
+
+        .logo-icon:hover {
+            transform: scale(1.05);
+        }
+
+        .logo-text h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-text p {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            font-weight: 300;
+            color: #9ca3af;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.75rem 1.25rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .user-info:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .logout-btn {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            color: #ff6b6b;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .logout-btn:hover {
+            background: rgba(220, 53, 69, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .main-container {
+            max-width: 900px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .content-card {
+            background: rgba(20, 24, 35, 0.85);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            box-shadow: 
+                0 25px 50px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            color: #e4e6ea;
+            transition: transform 0.3s ease;
+        }
+
+        .content-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .module-header {
+            background: linear-gradient(135deg, 
+                rgba(102, 126, 234, 0.15) 0%, 
+                rgba(118, 75, 162, 0.15) 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e4e6ea;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .module-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        .module-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+
+        .module-subtitle {
+            font-size: 2rem;
+            font-weight: 300;
+            color: #e4e6ea;
+            margin-bottom: 1rem;
+        }
+
+        .module-description {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+            color: #9ca3af;
+        }
+
+        .navigation-section {
+            padding: 3rem 2rem;
+        }
+
+        .nav-options {
+            display: flex;
+            justify-content: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .nav-button {
+            background: rgba(30, 34, 48, 0.6);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            text-decoration: none;
+            color: #e4e6ea;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transform: translateY(0);
+            width: 100%;
+        }
+
+        .nav-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.6s;
+        }
+
+        .nav-button:hover::before {
+            left: 100%;
+        }
+
+        .nav-button:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 30px rgba(102, 126, 234, 0.3);
+            border-color: rgba(102, 126, 234, 0.6);
+            background: rgba(40, 44, 58, 0.8);
+        }
+
+        .nav-button:active {
+            transform: translateY(-4px) scale(0.98);
+        }
+
+        .nav-button.secondary {
+            background: linear-gradient(135deg, 
+                rgba(142, 68, 173, 0.2) 0%, 
+                rgba(155, 89, 182, 0.2) 100%);
+            border-color: rgba(142, 68, 173, 0.4);
+        }
+
+        .nav-button.secondary:hover {
+            background: linear-gradient(135deg, 
+                rgba(142, 68, 173, 0.3) 0%, 
+                rgba(155, 89, 182, 0.3) 100%);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 30px rgba(142, 68, 173, 0.4);
+        }
+
+        .nav-icon {
+            font-size: 1.8rem;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 18px;
+            flex-shrink: 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover .nav-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .nav-button.secondary .nav-icon {
+            background: rgba(142, 68, 173, 0.3);
+            color: #8e44ad;
+            border-color: rgba(142, 68, 173, 0.4);
+        }
+
+        .nav-text {
+            flex: 1;
+        }
+
+        .nav-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #e4e6ea;
+        }
+
+        .nav-description {
+            font-size: 1rem;
+            opacity: 0.8;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+
+        .nav-arrow {
+            font-size: 1.4rem;
+            opacity: 0.6;
+            transition: all 0.3s ease;
+            color: #9ca3af;
+        }
+
+        .nav-button:hover .nav-arrow {
+            transform: translateX(8px);
+            opacity: 1;
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .main-container {
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+
+            .navigation-section {
+                padding: 2rem 1rem;
+            }
+
+            .nav-options {
+                max-width: 100%;
+            }
+
+            .nav-button {
+                padding: 1.5rem;
+                gap: 1rem;
+            }
+
+            .nav-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+
+            .nav-title {
+                font-size: 1.1rem;
+            }
+
+            .logo-text h1 {
+                font-size: 1.5rem;
+            }
+
+            .module-subtitle {
+                font-size: 1.6rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-button {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+                padding: 1.5rem 1rem;
+            }
+
+            .nav-arrow {
+                display: none;
+            }
+
+            .user-section {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>Sistema de Gestión SDMO</h1>
+                    <p>Sección Desarrollo y Mantenimiento de Obras</p>
+                </div>
+            </div>
+            <div class="user-section">
+                <div class="user-info">
+                    <i class="fas fa-user"></i>
+                    <span id="usuario">Cargando...</span>
+                </div>
+                <button class="logout-btn" id="btnLogout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="content-card">
+            <div class="module-header">
+                <div class="module-title">
+                    <i class="fas fa-boxes"></i>
+                    Gestión de Artículos
+                </div>
+                <h2 class="module-subtitle">Centro de Control de Inventario</h2>
+                <p class="module-description">
+                    Acceda a las herramientas principales para gestionar, consultar y mantener 
+                    el control completo de su inventario de manera eficiente y segura.
+                </p>
+            </div>
+
+            <div class="navigation-section">
+                <div class="nav-options">
+                    <a class="nav-button secondary" href="#" onclick="verInventario(); return false;">
+                        <div class="nav-icon">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <div class="nav-text">
+                            <div class="nav-title">Ver Inventario</div>
+                            <div class="nav-description">Consultar y gestionar el inventario actual con filtros avanzados</div>
+                        </div>
+                        <div class="nav-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+        // Configuración Supabase
+        const supabaseUrl = 'https://qpccqoeronbcdyejfjod.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwY2Nxb2Vyb25iY2R5ZWpmam9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMzA5MzIsImV4cCI6MjA1OTgwNjkzMn0.v_KA6VdHl-F3sRiVaFMsfDQCS1qKERFBk5mTBcSiIDQ';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Variables globales para control de estado
+        let isLoggingOut = false;
+        let authCheckInProgress = false;
+
+        // Inicializar la aplicación cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', initApp);
+
+        // Función principal de inicialización
+        async function initApp() {
+            try {
+                if (authCheckInProgress || isLoggingOut) return;
+                
+                authCheckInProgress = true;
+                showLoading(true);
+                
+                await checkAuthentication();
+                setupEventListeners();
+                showNotification("Sesión iniciada correctamente", "success");
+            } catch (error) {
+                console.error("Error de inicialización:", error);
+                if (!isLoggingOut) {
+                    showNotification("Error al verificar la sesión", "error");
+                    setTimeout(() => {
+                        if (!isLoggingOut) {
+                            window.location.href = "https://inventario-salida-frontend.vercel.app/";
+                        }
+                    }, 2000);
+                }
+            } finally {
+                authCheckInProgress = false;
+                if (!isLoggingOut) {
+                    showLoading(false);
+                }
+            }
+        }
+
+        // Verificar autenticación del usuario
+        async function checkAuthentication() {
+            if (isLoggingOut) return null;
+            
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            
+            if (authError && !isLoggingOut) {
+                throw authError;
+            }
+            
+            if (!user && !isLoggingOut) {
+                window.location.href = "https://inventario-salida-frontend.vercel.app/";
+                throw new Error("No hay usuario autenticado");
+            }
+
+            if (user && !isLoggingOut) {
+                // Mostrar email del usuario
+                const usuarioElement = document.getElementById("usuario");
+                if (usuarioElement) {
+                    usuarioElement.textContent = user.email;
+                }
+            }
+            
+            return user;
+        }
+
+        // Configurar event listeners
+        function setupEventListeners() {
+            const logoutBtn = document.getElementById("btnLogout");
+            if (logoutBtn) {
+                logoutBtn.addEventListener("click", logout);
+            }
+        }
+
+        // Cerrar sesión
+        async function logout() {
+            if (isLoggingOut) return;
+            
+            try {
+                isLoggingOut = true;
+                showLoading(true);
+                showNotification("Cerrando sesión...", "info");
+                
+                // Limpiar cualquier listener de eventos de autenticación
+                supabase.auth.onAuthStateChange(() => {});
+                
+                const { error } = await supabase.auth.signOut();
+                if (error && error.message !== 'The user is not authenticated') {
+                    throw error;
+                }
+                
+                // Esperar un poco más para asegurar que el logout se complete
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Limpiar cualquier dato de sesión local
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Forzar la redirección
+                window.location.replace("https://inventario-salida-frontend.vercel.app/");
+                
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error);
+                // En caso de error, forzar la redirección de todas formas
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.replace("https://inventario-salida-frontend.vercel.app/");
+            }
+        }
+
+        // Función de navegación para Ver Inventario
+        window.verInventario = () => {
+            if (!isLoggingOut) {
+                showLoading(true);
+                showNotification('Cargando inventario...', 'info');
+                setTimeout(() => {
+                    location.href = 'inventario_sdmo.html';
+                }, 500);
+            }
+        };
+
+        // Mostrar notificación
+        function showNotification(message, type = "info") {
+            if (isLoggingOut && type === "error") return;
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                ${message}
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Mostrar/ocultar loading
+        function showLoading(show) {
+            const loader = document.getElementById("loading");
+            if (loader) {
+                loader.style.display = show ? "flex" : "none";
+            }
+        }
+
+        // Manejar cambios en el estado de autenticación
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT' && !isLoggingOut) {
+                // Solo redirigir si no estamos en proceso de cerrar sesión
+                window.location.href = "https://inventario-salida-frontend.vercel.app/";
+            }
+        });
+
+        // Manejar visibilidad de la página para evitar verificaciones innecesarias
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden || isLoggingOut) {
+                return;
+            }
+            
+            // Verificar autenticación solo si la página se vuelve visible
+            // y no estamos en proceso de logout
+            setTimeout(async () => {
+                if (!document.hidden && !isLoggingOut && !authCheckInProgress) {
+                    try {
+                        await checkAuthentication();
+                    } catch (error) {
+                        console.error("Error en verificación de visibilidad:", error);
+                        if (!isLoggingOut) {
+                            window.location.href = "https://inventario-salida-frontend.vercel.app/";
+                        }
+                    }
+                }
+            }, 1000);
+        });
+
+        // Prevenir errores de conexión durante el logout
+        window.addEventListener('beforeunload', () => {
+            isLoggingOut = true;
+        });
+    </script>
+</body>
+</html>
