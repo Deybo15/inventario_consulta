@@ -560,7 +560,7 @@
                     showNotification("Error al verificar la sesión", "error");
                     setTimeout(() => {
                         if (!isLoggingOut) {
-                            window.location.href = "https://inventario-salida-frontend.vercel.app/";
+                            window.location.href = "https://inventario-consulta.onrender.com/";
                         }
                     }, 2000);
                 }
@@ -583,7 +583,7 @@
             }
             
             if (!user && !isLoggingOut) {
-                window.location.href = "https://inventario-salida-frontend.vercel.app/";
+                window.location.href = "https://inventario-consulta.onrender.com/";
                 throw new Error("No hay usuario autenticado");
             }
 
@@ -631,14 +631,14 @@
                 sessionStorage.clear();
                 
                 // Forzar la redirección
-                window.location.replace("https://inventario-salida-frontend.vercel.app/");
+                window.location.replace("https://inventario-consulta.onrender.com/");
                 
             } catch (error) {
                 console.error("Error al cerrar sesión:", error);
                 // En caso de error, forzar la redirección de todas formas
                 localStorage.clear();
                 sessionStorage.clear();
-                window.location.replace("https://inventario-salida-frontend.vercel.app/");
+                window.location.replace("https://inventario-consulta.onrender.com/");
             }
         }
 
@@ -687,7 +687,7 @@
         supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT' && !isLoggingOut) {
                 // Solo redirigir si no estamos en proceso de cerrar sesión
-                window.location.href = "https://inventario-salida-frontend.vercel.app/";
+                window.location.href = "https://inventario-consulta.onrender.com/";
             }
         });
 
@@ -706,7 +706,7 @@
                     } catch (error) {
                         console.error("Error en verificación de visibilidad:", error);
                         if (!isLoggingOut) {
-                            window.location.href = "https://inventario-salida-frontend.vercel.app/";
+                            window.location.href = "https://inventario-consulta.onrender.com/";
                         }
                     }
                 }
