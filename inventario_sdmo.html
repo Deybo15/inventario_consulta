@@ -84,13 +84,18 @@
     }
     
     .filters {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      display: flex;
       gap: 1rem;
       margin-bottom: 2rem;
     }
     
+    .search-container {
+      flex: 1;
+      position: relative;
+    }
+    
     .filters input {
+      width: 100%;
       padding: 0.875rem 1rem;
       background: rgba(45, 50, 65, 0.6);
       backdrop-filter: blur(10px);
@@ -184,6 +189,7 @@
       margin: auto;
       transition: all 0.3s ease;
       border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: pointer;
     }
     
     td img:hover {
@@ -323,6 +329,88 @@
       border: 1px solid rgba(102, 126, 234, 0.3);
       backdrop-filter: blur(5px);
     }
+
+    /* Estilos para el modal de imagen */
+    .image-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(10px);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      position: relative;
+      max-width: 90%;
+      max-height: 90%;
+      background: rgba(30, 34, 48, 0.95);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 1.5rem;
+      background: linear-gradient(135deg, 
+        rgba(102, 126, 234, 0.3) 0%, 
+        rgba(118, 75, 162, 0.3) 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: #e4e6ea;
+      font-size: 1.2rem;
+      font-weight: 500;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #e4e6ea;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(1.1);
+    }
+
+    .modal-body {
+      padding: 1rem;
+      max-height: 75vh;
+      overflow-y: auto;
+      overflow-x: auto;
+    }
+
+    .modal-image {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: block;
+      margin: 0 auto;
+    }
     
     /* Scrollbar personalizada */
     ::-webkit-scrollbar {
@@ -377,12 +465,22 @@
       }
       
       .filters {
-        grid-template-columns: 1fr;
+        flex-direction: column;
       }
       
       td img {
         max-width: 50px;
         height: 50px;
+      }
+
+      .modal-content {
+        max-width: 95%;
+        max-height: 95%;
+      }
+
+      .modal-body {
+        padding: 0.5rem;
+        max-height: 65vh;
       }
     }
     
@@ -420,8 +518,9 @@
   <div class="container">
     <!-- Filtros -->
     <div class="filters">
-      <input id="filtro-codigo" type="text" placeholder="🔍 Buscar por código">
-      <input id="filtro-articulo" type="text" placeholder="🔍 Buscar por artículo">
+      <div class="search-container">
+        <input id="filtro-busqueda" type="text" placeholder="🔍 Buscar por código o artículo">
+      </div>
     </div>
 
     <!-- Botones de acciones -->
@@ -463,6 +562,19 @@
       <button class="btn" id="btn-prev" onclick="prevPage()">← Anterior</button>
       <span id="page-info">Página 1 de 1</span>
       <button class="btn" id="btn-next" onclick="nextPage()">Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- Modal para mostrar imagen -->
+  <div id="imageModal" class="image-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Imagen del Artículo</h3>
+        <button class="close-btn" onclick="closeImageModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <img id="modalImage" class="modal-image" src="" alt="Imagen del artículo">
+      </div>
     </div>
   </div>
 
@@ -512,6 +624,41 @@
         : 'Sin resultados';
     }
 
+    // Funciones para el modal de imagen
+    window.openImageModal = function(imageSrc, altText) {
+      const modal = document.getElementById('imageModal');
+      const modalImage = document.getElementById('modalImage');
+      
+      modalImage.src = imageSrc;
+      modalImage.alt = altText || 'Imagen del artículo';
+      modal.style.display = 'flex';
+      
+      // Prevenir scroll del body
+      document.body.style.overflow = 'hidden';
+    };
+
+    window.closeImageModal = function() {
+      const modal = document.getElementById('imageModal');
+      modal.style.display = 'none';
+      
+      // Restaurar scroll del body
+      document.body.style.overflow = 'auto';
+    };
+
+    // Cerrar modal al hacer click fuera de la imagen
+    document.getElementById('imageModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeImageModal();
+      }
+    });
+
+    // Cerrar modal con tecla ESC
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeImageModal();
+      }
+    });
+
     async function cargarDatos() {
       if (isLoading) return;
       
@@ -519,19 +666,15 @@
       errorEl.style.display = 'none';
 
       try {
-        const codigo = document.getElementById('filtro-codigo').value.trim();
-        const articulo = document.getElementById('filtro-articulo').value.trim();
+        const busqueda = document.getElementById('filtro-busqueda').value.trim();
 
         // Consulta simple sin JOIN para evitar errores de permisos
         let query = supabase
           .from('inventario_actual')
           .select('*', { count: 'exact' });
 
-        if (codigo) {
-          query = query.ilike('codigo_articulo', `%${codigo}%`);
-        }
-        if (articulo) {
-          query = query.ilike('nombre_articulo', `%${articulo}%`);
+        if (busqueda) {
+          query = query.or(`codigo_articulo.ilike.%${busqueda}%,nombre_articulo.ilike.%${busqueda}%`);
         }
 
         const { data: inventarioData, count, error } = await query
@@ -612,11 +755,10 @@
           : 'N/D';
 
         const imagen = row.imagen_url
-          ? `<a href="${row.imagen_url}" target="_blank" rel="noopener">
-               <img src="${row.imagen_url}" alt="Imagen del artículo" 
-                    onerror="this.src='https://via.placeholder.com/60x60/2d3241/9ca3af?text=Sin+img';"
-                    loading="lazy">
-             </a>`
+          ? `<img src="${row.imagen_url}" alt="Imagen del artículo" 
+                  ondblclick="openImageModal('${row.imagen_url}', '${row.nombre_articulo || 'Imagen del artículo'}')"
+                  onerror="this.src='https://via.placeholder.com/60x60/2d3241/9ca3af?text=Sin+img';"
+                  loading="lazy">`
           : '<img src="https://via.placeholder.com/60x60/2d3241/9ca3af?text=Sin+img" alt="Sin imagen">';
 
         const marca = row.marca || 'Sin marca';
@@ -638,14 +780,12 @@
     // Event listeners para filtros con debounce
     let timeoutId;
     function setupFilters() {
-      ['filtro-codigo', 'filtro-articulo'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => {
-          clearTimeout(timeoutId);
-          timeoutId = setTimeout(() => {
-            currentPage = 1;
-            cargarDatos();
-          }, 300);
-        });
+      document.getElementById('filtro-busqueda').addEventListener('input', () => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          currentPage = 1;
+          cargarDatos();
+        }, 300);
       });
     }
 
@@ -670,30 +810,59 @@
       try {
         showLoading(true);
         
-        // Obtener todos los datos sin paginación - método simple
-        const { data: inventarioData, error } = await supabase
-          .from('inventario_actual')
-          .select('codigo_articulo, nombre_articulo, unidad, cantidad_disponible')
-          .order('nombre_articulo');
+        // Función para obtener TODOS los registros paginando
+        async function obtenerTodosLosRegistros() {
+          let allData = [];
+          let from = 0;
+          const pageSize = 1000;
+          let hasMore = true;
 
-        if (error) throw error;
+          while (hasMore) {
+            const { data: inventarioData, error } = await supabase
+              .from('inventario_actual')
+              .select('codigo_articulo, nombre_articulo, unidad, cantidad_disponible')
+              .order('nombre_articulo')
+              .range(from, from + pageSize - 1);
 
-        // Obtener marcas por separado
-        const codigosArticulos = inventarioData?.map(item => item.codigo_articulo).filter(Boolean) || [];
+            if (error) throw error;
+
+            if (inventarioData && inventarioData.length > 0) {
+              allData = allData.concat(inventarioData);
+              from += pageSize;
+              hasMore = inventarioData.length === pageSize;
+            } else {
+              hasMore = false;
+            }
+          }
+
+          return allData;
+        }
+
+        // Obtener todos los datos
+        const inventarioCompleto = await obtenerTodosLosRegistros();
+        console.log(`Exportando ${inventarioCompleto.length} artículos a Excel`);
+
+        // Obtener marcas por lotes para evitar límites de URL
+        const codigosArticulos = inventarioCompleto.map(item => item.codigo_articulo).filter(Boolean);
         let marcasMap = {};
         
         if (codigosArticulos.length > 0) {
           try {
-            const { data: marcasData } = await supabase
-              .from('articulo_01')
-              .select('codigo_articulo, marca')
-              .in('codigo_articulo', codigosArticulos);
-            
-            if (marcasData) {
-              marcasMap = marcasData.reduce((acc, item) => {
-                acc[item.codigo_articulo] = item.marca;
-                return acc;
-              }, {});
+            // Procesar marcas en lotes de 500
+            const batchSize = 500;
+            for (let i = 0; i < codigosArticulos.length; i += batchSize) {
+              const batch = codigosArticulos.slice(i, i + batchSize);
+              
+              const { data: marcasData } = await supabase
+                .from('articulo_01')
+                .select('codigo_articulo, marca')
+                .in('codigo_articulo', batch);
+              
+              if (marcasData) {
+                marcasData.forEach(item => {
+                  marcasMap[item.codigo_articulo] = item.marca;
+                });
+              }
             }
           } catch (marcaError) {
             console.warn('No se pudieron cargar marcas para exportación:', marcaError);
@@ -701,7 +870,7 @@
         }
 
         // Preparar datos para Excel
-        const excelData = inventarioData.map(row => ({
+        const excelData = inventarioCompleto.map(row => ({
           'Código': row.codigo_articulo,
           'Artículo': row.nombre_articulo,
           'Marca': marcasMap[row.codigo_articulo] || 'Sin marca',
@@ -723,7 +892,12 @@
         ws['!cols'] = colWidths;
 
         XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
-        XLSX.writeFile(wb, `Inventario_SDMO_${new Date().toISOString().split('T')[0]}.xlsx`);
+        XLSX.writeFile(wb, `Inventario_Completo_SDMO_${new Date().toISOString().split('T')[0]}.xlsx`);
+        
+        // Mostrar mensaje de éxito
+        setTimeout(() => {
+          alert(`✅ Excel exportado exitosamente con ${inventarioCompleto.length} artículos`);
+        }, 500);
         
       } catch (error) {
         showError(`Error al exportar a Excel: ${error.message}`);
@@ -739,46 +913,114 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('l', 'mm', 'a4'); // Landscape para mejor ajuste
 
+        // Función para obtener TODOS los registros paginando
+        async function obtenerTodosLosRegistros() {
+          let allData = [];
+          let from = 0;
+          const pageSize = 1000;
+          let hasMore = true;
+
+          while (hasMore) {
+            const { data: inventarioData, error } = await supabase
+              .from('inventario_actual')
+              .select('codigo_articulo, nombre_articulo, unidad, cantidad_disponible')
+              .order('nombre_articulo')
+              .range(from, from + pageSize - 1);
+
+            if (error) throw error;
+
+            if (inventarioData && inventarioData.length > 0) {
+              allData = allData.concat(inventarioData);
+              from += pageSize;
+              hasMore = inventarioData.length === pageSize;
+            } else {
+              hasMore = false;
+            }
+          }
+
+          return allData;
+        }
+
+        // Obtener todos los datos
+        const inventarioCompleto = await obtenerTodosLosRegistros();
+        console.log(`Exportando ${inventarioCompleto.length} artículos a PDF`);
+
         // Título
         doc.setFontSize(18);
         doc.text('Inventario Actual - SDMO', 14, 20);
         doc.setFontSize(12);
         doc.text(`Generado el: ${new Date().toLocaleDateString('es-CR')}`, 14, 30);
+        doc.setFontSize(10);
+        doc.text(`Total de artículos: ${inventarioCompleto.length}`, 14, 35);
 
-        // Obtener datos visibles en la tabla
-        const tableData = [];
-        const rows = document.querySelectorAll('#tabla-inventario tbody tr');
+        // Obtener marcas por lotes para evitar límites de URL
+        const codigosArticulos = inventarioCompleto.map(item => item.codigo_articulo).filter(Boolean);
+        let marcasMap = {};
         
-        rows.forEach(row => {
-          const cells = row.querySelectorAll('td');
-          if (cells.length > 1) { // Evitar la fila de "no hay resultados"
-            tableData.push([
-              cells[1].textContent.trim(), // Código
-              cells[2].textContent.trim(), // Artículo
-              cells[3].textContent.trim(), // Marca
-              cells[4].textContent.trim(), // Unidad
-              cells[5].textContent.trim()  // Cantidad
-            ]);
+        if (codigosArticulos.length > 0) {
+          try {
+            // Procesar marcas en lotes de 500
+            const batchSize = 500;
+            for (let i = 0; i < codigosArticulos.length; i += batchSize) {
+              const batch = codigosArticulos.slice(i, i + batchSize);
+              
+              const { data: marcasData } = await supabase
+                .from('articulo_01')
+                .select('codigo_articulo, marca')
+                .in('codigo_articulo', batch);
+              
+              if (marcasData) {
+                marcasData.forEach(item => {
+                  marcasMap[item.codigo_articulo] = item.marca;
+                });
+              }
+            }
+          } catch (marcaError) {
+            console.warn('No se pudieron cargar marcas para PDF:', marcaError);
           }
+        }
+
+        // Preparar datos para PDF
+        const tableData = inventarioCompleto.map(row => {
+          const cantidad = parseFloat(row.cantidad_disponible);
+          const cantidadFormateada = (!isNaN(cantidad) && isFinite(cantidad))
+            ? cantidad.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : 'N/D';
+
+          return [
+            row.codigo_articulo || 'N/D',
+            row.nombre_articulo || 'N/D',
+            marcasMap[row.codigo_articulo] || 'Sin marca',
+            row.unidad || 'N/D',
+            cantidadFormateada
+          ];
         });
 
         doc.autoTable({
           head: [['Código', 'Artículo', 'Marca', 'Unidad', 'Cantidad']],
           body: tableData,
-          startY: 40,
+          startY: 45,
           theme: 'striped',
           headStyles: { fillColor: [102, 126, 234] },
-          styles: { fontSize: 10 },
+          styles: { fontSize: 8 },
           columnStyles: {
-            0: { cellWidth: 30 },
-            1: { cellWidth: 80 },
-            2: { cellWidth: 40 },
-            3: { cellWidth: 25 },
-            4: { cellWidth: 30 }
-          }
+            0: { cellWidth: 25 },
+            1: { cellWidth: 75 },
+            2: { cellWidth: 35 },
+            3: { cellWidth: 20 },
+            4: { cellWidth: 25 }
+          },
+          margin: { top: 45, bottom: 20 },
+          pageBreak: 'auto',
+          showHead: 'everyPage'
         });
 
-        doc.save(`Inventario_SDMO_${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.save(`Inventario_Completo_SDMO_${new Date().toISOString().split('T')[0]}.pdf`);
+        
+        // Mostrar mensaje de éxito
+        setTimeout(() => {
+          alert(`✅ PDF exportado exitosamente con ${inventarioCompleto.length} artículos`);
+        }, 500);
         
       } catch (error) {
         showError(`Error al exportar a PDF: ${error.message}`);
