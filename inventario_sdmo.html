@@ -748,7 +748,7 @@
         return;
       }
 
-      rows.forEach(row => {
+      rows.forEach((row, index) => {
         const cantidad = parseFloat(row.cantidad_disponible);
         const cantidadFormateada = (!isNaN(cantidad) && isFinite(cantidad))
           ? cantidad.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -756,7 +756,9 @@
 
         const imagen = row.imagen_url
           ? `<img src="${row.imagen_url}" alt="Imagen del artículo" 
-                  ondblclick="openImageModal('${row.imagen_url}', '${row.nombre_articulo || 'Imagen del artículo'}')"
+                  class="clickable-image" 
+                  data-image-url="${row.imagen_url}" 
+                  data-image-alt="${row.nombre_articulo || 'Imagen del artículo'}"
                   onerror="this.src='https://via.placeholder.com/60x60/2d3241/9ca3af?text=Sin+img';"
                   loading="lazy">`
           : '<img src="https://via.placeholder.com/60x60/2d3241/9ca3af?text=Sin+img" alt="Sin imagen">';
@@ -774,6 +776,16 @@
             <td><strong>${cantidadFormateada}</strong></td>
           </tr>
         `);
+      });
+
+      // Agregar event listeners a todas las imágenes clickeables
+      const clickableImages = document.querySelectorAll('.clickable-image');
+      clickableImages.forEach(img => {
+        img.addEventListener('dblclick', function() {
+          const imageUrl = this.getAttribute('data-image-url');
+          const imageAlt = this.getAttribute('data-image-alt');
+          openImageModal(imageUrl, imageAlt);
+        });
       });
     }
 
