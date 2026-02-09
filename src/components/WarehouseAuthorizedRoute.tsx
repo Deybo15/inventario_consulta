@@ -20,8 +20,8 @@ export const WarehouseAuthorizedRoute = () => {
                 const { data: colabs, error } = await supabase
                     .from('colaboradores_06')
                     .select('bodeguero')
-                    .eq('correo_colaborador', session.user.email)
-                    .eq('bodeguero', 'Autorizado');
+                    .ilike('correo_colaborador', session.user.email || '')
+                    .ilike('bodeguero', 'Autorizado');
 
                 if (error || !colabs || colabs.length === 0) {
                     setStatus('unauthorized');
