@@ -30,10 +30,16 @@ import {
     ArrowDown,
     FileSpreadsheet,
     AlertCircle,
+    CheckCircle,
+    Users,
+    ChevronLeft,
+    ChevronRight,
+    LayoutGrid,
+    User,
+    XCircle,
     X,
     Filter,
-    FileSearch,
-    CheckCircle
+    FileSearch
 } from 'lucide-react';
 
 // Shared Components
@@ -77,13 +83,25 @@ type SortConfig = {
     direction: 'asc' | 'desc';
 } | null;
 
+interface ColaboradorDetalle {
+    identificacion: string;
+    alias: string;
+    colaborador: string;
+}
+
 export default function ConsultarSalidas() {
     const navigate = useNavigate();
 
     // State
-    const [activeTab, setActiveTab] = useState<'solicitud' | 'fecha' | 'id_salida'>('solicitud');
+    const [activeTab, setActiveTab] = useState<'solicitud' | 'fecha' | 'id_salida' | 'colaborador'>('solicitud');
     const [solicitudInput, setSolicitudInput] = useState('');
     const [idSalidaInput, setIdSalidaInput] = useState('');
+    const [colaboradorBusqueda, setColaboradorBusqueda] = useState('');
+    const [colaboradorSugerencias, setColaboradorSugerencias] = useState<ColaboradorDetalle[]>([]);
+    const [colaboradorSeleccionado, setColaboradorSeleccionado] = useState<ColaboradorDetalle | null>(null);
+    const [colaboradorPagina, setColaboradorPagina] = useState(1);
+    const [colaboradorTotal, setColaboradorTotal] = useState(0);
+    const COLAB_PAGE_SIZE = 15;
     const [fechaDesde, setFechaDesde] = useState('');
     const [fechaHasta, setFechaHasta] = useState('');
     const [colaboradores, setColaboradores] = useState<Record<string, string>>({});
@@ -120,12 +138,37 @@ export default function ConsultarSalidas() {
     const resetSearchState = () => {
         setSolicitudInput('');
         setIdSalidaInput('');
+        setColaboradorBusqueda('');
+        setColaboradorSugerencias([]);
+        setColaboradorSeleccionado(null);
+        setColaboradorPagina(1);
+        setColaboradorTotal(0);
         setSalidas([]);
         setResumen([]);
         setHasSearched(false);
         setExpandedSalidas([]);
         setStatusMessage(null);
     };
+
+    // Suggestions handling
+    useEffect(() => {
+        if (!colaboradorBusqueda.trim() || colaboradorSeleccionado) {
+            setColaboradorSugerencias([]);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            const { data } = await supabase
+                .from('colaboradores_06')
+                .select('identificacion, alias, colaborador')
+                .or(`alias.ilike.%${colaboradorBusqueda}%,colaborador.ilike.%${colaboradorBusqueda}%`)
+                .limit(5);
+
+            if (data) setColaboradorSugerencias(data as ColaboradorDetalle[]);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [colaboradorBusqueda, colaboradorSeleccionado]);
 
     // Reset on unmount
     useEffect(() => {
@@ -257,6 +300,57 @@ export default function ConsultarSalidas() {
             }
         } catch (error: any) {
             console.error("Error al obtener salidas:", error);
+            setStatusMessage({ type: 'error', message: "Error: " + error.message });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleBuscarPorColaborador = async (identificacion: string, page: number = 1) => {
+        setLoading(true);
+        setHasSearched(true);
+        setSalidas([]);
+        setStatusMessage(null);
+        setColaboradorPagina(page);
+
+        try {
+            const from = (page - 1) * COLAB_PAGE_SIZE;
+            const to = from + COLAB_PAGE_SIZE - 1;
+
+            const { data, error, count } = await supabase
+                .from("salida_articulo_08")
+                .select(`
+                    id_salida,
+                    fecha_salida,
+                    finalizada,
+                    numero_solicitud,
+                    retira,
+                    autoriza,
+                    dato_salida_13 (
+                        registro_salida,
+                        articulo,
+                        cantidad,
+                        subtotal,
+                        articulo_01 (
+                            nombre_articulo
+                        )
+                    )
+                `, { count: 'exact' })
+                .eq("retira", identificacion)
+                .range(from, to)
+                .order("fecha_salida", { ascending: false });
+
+            if (error) throw error;
+            setSalidas(data as any[] || []);
+            if (count !== null) setColaboradorTotal(count);
+
+            if (!data || data.length === 0) {
+                setStatusMessage({ type: 'info', message: "No se encontraron movimientos." });
+            } else {
+                setStatusMessage({ type: 'success', message: `Página ${page}: ${data.length} movimientos localizados.` });
+            }
+        } catch (error: any) {
+            console.error("Error al obtener salidas por colaborador:", error);
             setStatusMessage({ type: 'error', message: "Error: " + error.message });
         } finally {
             setLoading(false);
@@ -541,6 +635,14 @@ export default function ConsultarSalidas() {
                                 Consulta por Salida
                             </button>
                             <button
+                                onClick={() => { setActiveTab('colaborador'); resetSearchState(); }}
+                                className={`px-6 md:px-8 py-3 rounded-[6px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 whitespace-nowrap
+                                     ${activeTab === 'colaborador' ? 'bg-[#0071E3] text-white shadow-lg shadow-[#0071E3]/20' : 'text-[#86868B] hover:text-[#F5F5F7]'}`}
+                            >
+                                <Users className="w-4 h-4" />
+                                Consulta por Colaborador
+                            </button>
+                            <button
                                 onClick={() => { setActiveTab('fecha'); resetSearchState(); }}
                                 className={`px-6 md:px-8 py-3 rounded-[6px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 whitespace-nowrap
                                      ${activeTab === 'fecha' ? 'bg-[#0071E3] text-white shadow-lg shadow-[#0071E3]/20' : 'text-[#86868B] hover:text-[#F5F5F7]'}`}
@@ -561,14 +663,14 @@ export default function ConsultarSalidas() {
 
                             <div className="flex flex-col md:flex-row gap-4">
                                 <div className="flex-1 relative group/input">
-                                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-[#333333] group-focus-within/input:text-[#0071E3] transition-colors" />
+                                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-[#86868B] group-focus-within/input:text-[#0071E3] transition-colors" />
                                     <input
                                         type="text"
                                         placeholder="Número de Solicitud (Ej: 2025-000123)"
                                         value={solicitudInput}
                                         onChange={(e) => setSolicitudInput(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleBuscarSolicitud()}
-                                        className="w-full h-16 bg-[#1D1D1F] border border-[#333333] rounded-[8px] pl-16 pr-6 text-xl text-white font-bold placeholder-[#333333] focus:outline-none focus:border-[#0071E3]/50 transition-all shadow-inner uppercase"
+                                        className="w-full h-16 bg-[#1D1D1F] border border-[#333333] rounded-[8px] pl-16 pr-6 text-xl text-white font-bold placeholder-[#86868B] focus:outline-none focus:border-[#0071E3]/50 transition-all shadow-inner uppercase"
                                     />
                                 </div>
                                 <button
@@ -593,14 +695,14 @@ export default function ConsultarSalidas() {
 
                             <div className="flex flex-col md:flex-row gap-4">
                                 <div className="flex-1 relative group/input">
-                                    <Hash className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-[#333333] group-focus-within/input:text-[#0071E3] transition-colors" />
+                                    <Hash className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-[#86868B] group-focus-within/input:text-[#0071E3] transition-colors" />
                                     <input
                                         type="text"
                                         placeholder="Número de Salida (Ej: 9657)"
                                         value={idSalidaInput}
                                         onChange={(e) => setIdSalidaInput(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleBuscarSalida()}
-                                        className="w-full h-16 bg-[#1D1D1F] border border-[#333333] rounded-[8px] pl-16 pr-6 text-xl text-white font-bold placeholder-[#333333] focus:outline-none focus:border-[#0071E3]/50 transition-all shadow-inner uppercase"
+                                        className="w-full h-16 bg-[#1D1D1F] border border-[#333333] rounded-[8px] pl-16 pr-6 text-xl text-white font-bold placeholder-[#86868B] focus:outline-none focus:border-[#0071E3]/50 transition-all shadow-inner uppercase"
                                     />
                                 </div>
                                 <button
@@ -612,6 +714,76 @@ export default function ConsultarSalidas() {
                                     Consultar
                                 </button>
                             </div>
+                        </div>
+                    )}
+
+                    {/* Form: Por Colaborador */}
+                    {activeTab === 'colaborador' && (
+                        <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in zoom-in-95 duration-500">
+                            <div className="text-center space-y-2 mb-8">
+                                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Búsqueda por Colaborador</h3>
+                                <p className="text-[10px] font-black text-[#86868B] uppercase tracking-widest">Ingrese el nombre o alias para filtrar movimientos históricos.</p>
+                            </div>
+
+                            <div className="relative group/input">
+                                <Users className="absolute left-6 top-5 w-6 h-6 text-[#86868B] group-focus-within/input:text-[#0071E3] transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Nombre o Alias del Colaborador..."
+                                    value={colaboradorBusqueda}
+                                    onChange={(e) => {
+                                        setColaboradorBusqueda(e.target.value);
+                                        if (colaboradorSeleccionado) setColaboradorSeleccionado(null);
+                                    }}
+                                    className="w-full h-16 bg-[#1D1D1F] border border-[#333333] rounded-[8px] pl-16 pr-6 text-xl text-white font-bold placeholder-[#86868B] focus:outline-none focus:border-[#0071E3]/50 transition-all shadow-inner uppercase"
+                                />
+
+                                {/* Suggestions Dropdown */}
+                                {colaboradorSugerencias.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-[#121212] border border-[#333333] rounded-xl shadow-2xl z-[100] overflow-hidden overflow-y-auto max-h-60">
+                                        {colaboradorSugerencias.map((colab) => (
+                                            <button
+                                                key={colab.identificacion}
+                                                onClick={() => {
+                                                    setColaboradorSeleccionado(colab);
+                                                    setColaboradorBusqueda(`${colab.alias} (${colab.colaborador})`);
+                                                    setColaboradorSugerencias([]);
+                                                    handleBuscarPorColaborador(colab.identificacion);
+                                                }}
+                                                className="w-full p-4 flex flex-col items-start gap-1 hover:bg-[#0071E3]/5 border-b border-[#333333] last:border-0 transition-colors"
+                                            >
+                                                <span className="text-sm font-black text-white uppercase italic">{colab.alias}</span>
+                                                <span className="text-[10px] font-bold text-[#86868B] uppercase">{colab.colaborador}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {colaboradorSeleccionado && (
+                                <div className="p-4 bg-[#0071E3]/5 border border-[#0071E3]/20 rounded-xl flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-2 rounded-lg bg-[#0071E3]/10">
+                                            <CheckCircle className="w-5 h-5 text-[#0071E3]" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-[#0071E3] uppercase tracking-widest">Colaborador Activo</p>
+                                            <p className="text-sm font-black text-white uppercase italic">{colaboradorSeleccionado.alias}</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setColaboradorSeleccionado(null);
+                                            setColaboradorBusqueda('');
+                                            setSalidas([]);
+                                            setHasSearched(false);
+                                        }}
+                                        className="text-[#86868B] hover:text-white transition-colors"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -641,7 +813,7 @@ export default function ConsultarSalidas() {
                                 <div className="md:col-span-4">
                                     <label className="block text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em] mb-3 ml-1">Fecha Inicial</label>
                                     <div className="relative group/date">
-                                        <CalendarDays className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#333333] group-focus-within/date:text-[#0071E3] transition-colors pointer-events-none" />
+                                        <CalendarDays className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#86868B] group-focus-within/date:text-[#0071E3] transition-colors pointer-events-none" />
                                         <input
                                             type="date"
                                             value={fechaDesde}
@@ -653,7 +825,7 @@ export default function ConsultarSalidas() {
                                 <div className="md:col-span-4">
                                     <label className="block text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em] mb-3 ml-1">Fecha Final</label>
                                     <div className="relative group/date">
-                                        <CalendarCheck className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#333333] group-focus-within/date:text-[#0071E3] transition-colors pointer-events-none" />
+                                        <CalendarCheck className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#86868B] group-focus-within/date:text-[#0071E3] transition-colors pointer-events-none" />
                                         <input
                                             type="date"
                                             value={fechaHasta}
@@ -701,7 +873,7 @@ export default function ConsultarSalidas() {
                         <div className="relative mb-10">
                             <div className="absolute inset-0 bg-[#0071E3]/5 rounded-full blur-3xl scale-150 group-hover:scale-200 transition-transform duration-1000" />
                             <div className="w-32 h-32 bg-[#121212] border border-[#333333] rounded-[8px] flex items-center justify-center relative z-10 group-hover:rotate-6 transition-all duration-700">
-                                <FileSearch className="w-16 h-16 text-[#333333]" />
+                                <FileSearch className="w-16 h-16 text-[#86868B]" />
                             </div>
                         </div>
                         <h3 className="text-3xl font-black text-[#F5F5F7] uppercase italic tracking-tighter opacity-20">Sin Datos Consultados</h3>
@@ -732,16 +904,19 @@ export default function ConsultarSalidas() {
                         )}
 
                         {/* Empty results */}
-                        {((activeTab === 'solicitud' && salidas.length === 0) || (activeTab === 'fecha' && resumen.length === 0)) && (
-                            <div className="py-40 flex flex-col items-center justify-center text-center bg-[#121212] border border-[#333333] rounded-[8px]">
-                                <FileX className="w-16 h-16 text-[#333333] mb-6" />
-                                <h3 className="text-xl font-bold text-[#86868B] uppercase tracking-widest">No hay registros</h3>
-                                <p className="text-[#333333] mt-2 font-black uppercase text-[10px]">No se localizó información que cumpla con los criterios especificados.</p>
-                            </div>
-                        )}
+                        {((activeTab === 'solicitud' && salidas.length === 0) ||
+                            (activeTab === 'id_salida' && salidas.length === 0) ||
+                            (activeTab === 'colaborador' && salidas.length === 0) ||
+                            (activeTab === 'fecha' && resumen.length === 0)) && (
+                                <div className="py-40 flex flex-col items-center justify-center text-center bg-[#121212] border border-[#333333] rounded-[8px]">
+                                    <FileX className="w-16 h-16 text-[#86868B] mb-6" />
+                                    <h3 className="text-xl font-bold text-[#86868B] uppercase tracking-widest">No hay registros</h3>
+                                    <p className="text-[#86868B] mt-2 font-black uppercase text-[10px]">No se localizó información que cumpla con los criterios especificados.</p>
+                                </div>
+                            )}
 
-                        {/* Results: Solicitud / ID Salida Cards */}
-                        {(activeTab === 'solicitud' || activeTab === 'id_salida') && salidas.length > 0 && (
+                        {/* Results: Cards View (Solicitud, ID Salida, Colaborador) */}
+                        {(activeTab === 'solicitud' || activeTab === 'id_salida' || activeTab === 'colaborador') && salidas.length > 0 && (
                             <div className="grid grid-cols-1 gap-6">
                                 {salidas.map((salida) => {
                                     const totalSalida = calcularTotalSalida(salida);
@@ -750,7 +925,7 @@ export default function ConsultarSalidas() {
                                         <div key={salida.id_salida} className="bg-[#121212] border border-[#333333] rounded-3xl overflow-hidden shadow-2xl transition-all duration-300">
                                             <div className="p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
                                                 <div className="flex items-center gap-6">
-                                                    <div className="w-16 h-16 rounded-[4px] bg-[#1D1D1F] border border-[#333333] flex items-center justify-center text-[#333333] group-hover:text-[#0071E3] transition-colors">
+                                                    <div className="w-16 h-16 rounded-[4px] bg-[#1D1D1F] border border-[#333333] flex items-center justify-center text-[#86868B] group-hover:text-[#0071E3] transition-colors">
                                                         <Package className="w-8 h-8" />
                                                     </div>
                                                     <div className="space-y-1">
@@ -838,6 +1013,36 @@ export default function ConsultarSalidas() {
                             </div>
                         )}
 
+                        {activeTab === 'colaborador' && colaboradorTotal > COLAB_PAGE_SIZE && (
+                            <div className="p-8 border-t border-[#333333] bg-[#000000]/20 flex flex-col md:flex-row items-center justify-between gap-6 rounded-3xl mt-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-2 h-2 rounded-full bg-[#0071E3] animate-pulse"></div>
+                                    <span className="text-[10px] font-black text-[#86868B] uppercase tracking-[0.2em]">
+                                        Mostrando {(colaboradorPagina - 1) * COLAB_PAGE_SIZE + 1} – {Math.min(colaboradorPagina * COLAB_PAGE_SIZE, colaboradorTotal)} de {colaboradorTotal}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => handleBuscarPorColaborador(colaboradorSeleccionado!.identificacion, colaboradorPagina - 1)}
+                                        disabled={colaboradorPagina === 1 || loading}
+                                        className="px-6 py-3 bg-transparent border border-[#F5F5F7] rounded-[8px] text-[#F5F5F7] hover:bg-[#F5F5F7]/10 disabled:opacity-20 disabled:cursor-not-allowed transition-all font-black text-[10px] uppercase tracking-widest flex items-center gap-2"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" /> Anterior
+                                    </button>
+                                    <div className="px-6 py-3 bg-[#1D1D1F] rounded-[8px] border border-[#333333] text-[#0071E3] font-black text-xs">
+                                        {colaboradorPagina} / {Math.ceil(colaboradorTotal / COLAB_PAGE_SIZE) || 1}
+                                    </div>
+                                    <button
+                                        onClick={() => handleBuscarPorColaborador(colaboradorSeleccionado!.identificacion, colaboradorPagina + 1)}
+                                        disabled={colaboradorPagina >= Math.ceil(colaboradorTotal / COLAB_PAGE_SIZE) || loading}
+                                        className="px-6 py-3 bg-transparent border border-[#F5F5F7] rounded-[8px] text-[#F5F5F7] hover:bg-[#F5F5F7]/10 disabled:opacity-20 disabled:cursor-not-allowed transition-all font-black text-[10px] uppercase tracking-widest flex items-center gap-2"
+                                    >
+                                        Siguiente <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Results: Resumen Table */}
                         {activeTab === 'fecha' && resumen.length > 0 && (
                             <div className="space-y-6">
@@ -848,7 +1053,7 @@ export default function ConsultarSalidas() {
                                     </h3>
                                     <div className="flex items-center gap-4">
                                         <span className="text-[9px] font-black text-[#86868B] uppercase tracking-widest">Registros: {resumen.length}</span>
-                                        <div className="w-1.5 h-1.5 rounded-full bg-[#333333]" />
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#86868B]" />
                                         <span className="text-[9px] font-black text-[#0071E3] uppercase tracking-widest">
                                             {sortConfig ? `Orden x ${sortConfig.key} (${sortConfig.direction})` : 'Carga Predeterminada'}
                                         </span>
