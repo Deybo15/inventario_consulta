@@ -19,9 +19,9 @@ export const WarehouseAuthorizedRoute = () => {
                 // Verificamos si el usuario tiene el valor 'Autorizado' en la columna 'bodeguero'
                 const { data: colabs, error } = await supabase
                     .from('colaboradores_06')
-                    .select('bodeguero')
+                    .select('Bodeguero')
                     .ilike('correo_colaborador', session.user.email || '')
-                    .ilike('bodeguero', 'Autorizado');
+                    .ilike('Bodeguero', 'Autorizado');
 
                 if (error || !colabs || colabs.length === 0) {
                     setStatus('unauthorized');

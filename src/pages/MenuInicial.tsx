@@ -25,9 +25,9 @@ export default function MenuInicial() {
 
                 const { data: colabs } = await supabase
                     .from('colaboradores_06')
-                    .select('bodeguero')
+                    .select('Bodeguero')
                     .ilike('correo_colaborador', session.user.email || '')
-                    .ilike('bodeguero', 'Autorizado');
+                    .ilike('Bodeguero', 'Autorizado');
 
                 setIsWarehouseAuthorized(!!colabs && colabs.length > 0);
             } catch (error) {

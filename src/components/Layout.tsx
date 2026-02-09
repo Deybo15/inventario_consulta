@@ -24,9 +24,9 @@ export default function Layout() {
                 // Check warehouse role initially
                 const { data: colabs } = await supabase
                     .from('colaboradores_06')
-                    .select('bodeguero')
+                    .select('Bodeguero')
                     .ilike('correo_colaborador', user.email || '')
-                    .ilike('bodeguero', 'Autorizado');
+                    .ilike('Bodeguero', 'Autorizado');
                 setIsWarehouseAuthorized(!!colabs && colabs.length > 0);
             }
         };
@@ -42,9 +42,9 @@ export default function Layout() {
                 const checkRole = async () => {
                     const { data: colabs } = await supabase
                         .from('colaboradores_06')
-                        .select('bodeguero')
+                        .select('Bodeguero')
                         .ilike('correo_colaborador', session.user.email || '')
-                        .ilike('bodeguero', 'Autorizado');
+                        .ilike('Bodeguero', 'Autorizado');
                     setIsWarehouseAuthorized(!!colabs && colabs.length > 0);
                 };
                 checkRole();
