@@ -22,6 +22,14 @@ export default function Layout() {
                 setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario');
 
                 // Check warehouse role initially
+                // BROAD DEBUG CHECK
+                const { data: allData, error: allDataError } = await supabase
+                    .from('colaboradores_06')
+                    .select('*')
+                    .ilike('correo_colaborador', `%${user.email?.split('@')[0]}%`);
+
+                console.log('DEBUG - Layout User Data Found:', allData);
+
                 const { data: colabs, error: colabError } = await supabase
                     .from('colaboradores_06')
                     .select('Bodeguero')
@@ -48,6 +56,13 @@ export default function Layout() {
                 setUserName(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Usuario');
                 // Re-check role on auth state change if user is present
                 const checkRole = async () => {
+                    const { data: allData, error: allDataError } = await supabase
+                        .from('colaboradores_06')
+                        .select('*')
+                        .ilike('correo_colaborador', `%${session.user.email?.split('@')[0]}%`);
+
+                    console.log('DEBUG - Re-check User Data Found:', allData);
+
                     const { data: colabs, error: colabError } = await supabase
                         .from('colaboradores_06')
                         .select('Bodeguero')
