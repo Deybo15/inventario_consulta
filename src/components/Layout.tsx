@@ -22,11 +22,19 @@ export default function Layout() {
                 setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario');
 
                 // Check warehouse role initially
-                const { data: colabs } = await supabase
+                const { data: colabs, error: colabError } = await supabase
                     .from('colaboradores_06')
                     .select('Bodeguero')
                     .ilike('correo_colaborador', user.email || '')
                     .ilike('Bodeguero', 'Autorizado');
+
+                console.log('DEBUG - Layout Auth Check:', {
+                    email: user.email,
+                    found: !!colabs && colabs.length > 0,
+                    data: colabs,
+                    error: colabError
+                });
+
                 setIsWarehouseAuthorized(!!colabs && colabs.length > 0);
             }
         };
@@ -40,11 +48,19 @@ export default function Layout() {
                 setUserName(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Usuario');
                 // Re-check role on auth state change if user is present
                 const checkRole = async () => {
-                    const { data: colabs } = await supabase
+                    const { data: colabs, error: colabError } = await supabase
                         .from('colaboradores_06')
                         .select('Bodeguero')
                         .ilike('correo_colaborador', session.user.email || '')
                         .ilike('Bodeguero', 'Autorizado');
+
+                    console.log('DEBUG - MenuInicial Auth Check:', {
+                        email: session.user.email,
+                        found: !!colabs && colabs.length > 0,
+                        data: colabs,
+                        error: colabError
+                    });
+
                     setIsWarehouseAuthorized(!!colabs && colabs.length > 0);
                 };
                 checkRole();
