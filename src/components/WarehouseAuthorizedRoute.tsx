@@ -23,13 +23,6 @@ export const WarehouseAuthorizedRoute = () => {
                     .ilike('correo_colaborador', session.user.email || '')
                     .ilike('Bodeguero', 'Autorizado');
 
-                console.log('DEBUG - WarehouseRoute Auth Check:', {
-                    email: session.user.email,
-                    found: !!colabs && colabs.length > 0,
-                    data: colabs,
-                    error: error
-                });
-
                 if (error || !colabs || colabs.length === 0) {
                     setStatus('unauthorized');
                 } else {

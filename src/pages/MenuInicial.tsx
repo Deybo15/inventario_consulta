@@ -23,26 +23,11 @@ export default function MenuInicial() {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) return;
 
-                // BROAD DEBUG CHECK
-                const { data: allData } = await supabase
-                    .from('colaboradores_06')
-                    .select('*')
-                    .ilike('correo_colaborador', `%${session.user.email?.split('@')[0]}%`);
-
-                console.log('DEBUG - MenuInicial User Data Found:', allData);
-
-                const { data: colabs, error: colabError } = await supabase
+                const { data: colabs } = await supabase
                     .from('colaboradores_06')
                     .select('Bodeguero')
                     .ilike('correo_colaborador', session.user.email || '')
                     .ilike('Bodeguero', 'Autorizado');
-
-                console.log('DEBUG - MenuInicial Auth Check:', {
-                    email: session.user.email,
-                    found: !!colabs && colabs.length > 0,
-                    data: colabs,
-                    error: colabError
-                });
 
                 setIsWarehouseAuthorized(!!colabs && colabs.length > 0);
             } catch (error) {
