@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, Building2, ClipboardList, Settings2, Wrench, LogOut, UserCircle2, Menu, X, Calculator, History, QrCode, ArrowUpRight, Truck } from 'lucide-react';
+import { LayoutDashboard, Package, Users, Building2, ClipboardList, Settings2, Wrench, LogOut, UserCircle2, Menu, X, Calculator, History, QrCode, ArrowUpRight, Truck, Tag } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import CommandPalette from './CommandPalette';
@@ -73,7 +73,8 @@ export default function Layout() {
         { icon: ArrowUpRight, label: 'Historial Salidas', path: '/articulos/consultar-salidas' },
         { icon: History, label: 'Historial Artículo', path: '/articulos/historial-articulo' },
         ...(isWarehouseAuthorized ? [
-            { icon: Truck, label: 'Control de Salidas', path: '/articulos/control-salidas' }
+            { icon: Truck, label: 'Control de Salidas', path: '/articulos/control-salidas' },
+            { icon: Tag, label: 'Generar Etiqueta', path: '/articulos/generar-etiqueta' }
         ] : []),
     ];
 

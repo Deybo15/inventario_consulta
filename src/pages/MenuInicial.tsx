@@ -8,7 +8,8 @@ import {
     LayoutGrid,
     ChevronRight,
     Search,
-    Truck
+    Truck,
+    Tag
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { supabase } from '../lib/supabase';
@@ -65,12 +66,20 @@ export default function MenuInicial() {
             description: 'Análisis cronológico de consumos y trazabilidad completa.'
         },
         // Módulo condicional
-        ...(isWarehouseAuthorized ? [{
-            title: 'Control de Salidas',
-            icon: <Truck className="w-8 h-8" />,
-            path: '/articulos/control-salidas',
-            description: 'Garantizar la entrega física de los artículos y archivar registros.'
-        }] : [])
+        ...(isWarehouseAuthorized ? [
+            {
+                title: 'Control de Salidas',
+                icon: <Truck className="w-8 h-8" />,
+                path: '/articulos/control-salidas',
+                description: 'Garantizar la entrega física de los artículos y archivar registros.'
+            },
+            {
+                title: 'Generar Etiqueta',
+                icon: <Tag className="w-8 h-8" />,
+                path: '/articulos/generar-etiqueta',
+                description: 'Crear etiquetas de identificación QR para el control de stock.'
+            }
+        ] : [])
     ];
 
     return (
