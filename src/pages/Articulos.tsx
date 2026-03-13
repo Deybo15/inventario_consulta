@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ClipboardList,
@@ -14,10 +15,34 @@ import {
     ArrowLeft
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
+import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 
 export default function Articulos() {
     const navigate = useNavigate();
+    const [isWarehouseAuthorized, setIsWarehouseAuthorized] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        const checkWarehouseRole = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return;
+
+                const { data: colabs } = await supabase
+                    .from('colaboradores_06')
+                    .select('Bodeguero')
+                    .ilike('correo_colaborador', session.user.email || '')
+                    .ilike('Bodeguero', 'Autorizado');
+
+                setIsWarehouseAuthorized(!!colabs && colabs.length > 0);
+            } catch (error) {
+                console.error('Error checking warehouse role:', error);
+                setIsWarehouseAuthorized(false);
+            }
+        };
+
+        checkWarehouseRole();
+    }, []);
 
     const modules = [
         {
@@ -68,12 +93,13 @@ export default function Articulos() {
             path: '/articulos/historial-articulo',
             description: 'Trazabilidad completa de cada artículo'
         },
-        {
+        // Módulo condicional para Bodegueros Autorizados
+        ...(isWarehouseAuthorized ? [{
             title: 'Generar Etiqueta',
             icon: <Tag className="w-8 h-8" />,
             path: '/articulos/generar-etiqueta',
             description: 'Crear etiquetas de identificación para stock'
-        },
+        }] : []),
         {
             title: 'Consultar Salidas',
             icon: <ArrowUpRight className="w-8 h-8" />,
